@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WatchParty</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>WatchParty</h1>
+    </header>
+
+    <p id="error" class="error" role="alert" hidden></p>
+
+    <main class="dashboard">
+      <section class="browse">
+        <nav id="tabs-top" class="tabs" aria-label="Views">
+          <button id="tab-search" class="tab" aria-pressed="true">Search</button>
+          <button id="tab-library" class="tab" aria-pressed="false">My movies <span id="library-count" class="count"></span></button>
+        </nav>
+
+        <div id="search-view">
+          <form id="search-form" class="search-bar">
+            <select id="search-by" aria-label="Search by">
+              <option value="title">Title</option>
+              <option value="person">Person</option>
+              <option value="keyword">Keyword</option>
+              <option value="studio">Studio</option>
+            </select>
+            <input id="search-input" type="search" placeholder="Search for a movie…" autocomplete="off" autofocus>
+          </form>
+
+          <div class="filters">
+            <label id="role-filter" hidden>Role
+              <select id="role">
+                <option value="auto">Known for</option>
+                <option value="any">Any credit</option>
+                <option value="acting">Acting</option>
+                <option value="directing">Directing</option>
+              </select>
+            </label>
+            <label id="match-filter" hidden>Match
+            <select id="match">
+              <option value="all">All keywords</option>
+              <option value="any">Any keyword</option>
+            </select>
+          </label>
+          <label>Genre
+              <select id="genre"><option value="">Any</option></select>
+            </label>
+            <label>Years
+              <input id="year-from" type="number" min="1870" max="2100" placeholder="From">
+              <input id="year-to" type="number" min="1870" max="2100" placeholder="To">
+            </label>
+            <label>Language
+              <select id="language">
+                <option value="">Any</option>
+                <option value="en">English</option>
+                <option value="ja">Japanese</option>
+                <option value="ko">Korean</option>
+                <option value="fr">French</option>
+                <option value="es">Spanish</option>
+                <option value="hi">Hindi</option>
+                <option value="it">Italian</option>
+                <option value="de">German</option>
+                <option value="zh">Chinese</option>
+              </select>
+            </label>
+            <label>Sort
+              <select id="sort">
+                <option value="relevance">Best match</option>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="rating">Top rated</option>
+                <option value="title">Title A–Z</option>
+              </select>
+            </label>
+            <label class="check"><input id="include-obscure" type="checkbox"> Obscure &amp; extras</label>
+            <label class="check"><input id="include-upcoming" type="checkbox"> Unreleased</label>
+          </div>
+
+          <p id="search-status" class="muted"></p>
+        </div>
+
+        <div id="library-view" hidden>
+          <div id="library-filters" class="chips" role="group" aria-label="Filter my movies"></div>
+          <p id="library-empty" class="muted" hidden></p>
+        </div>
+
+        <ul id="movie-grid" class="movie-grid"></ul>
+
+        <nav id="pager" class="pager" aria-label="Search result pages" hidden>
+          <button id="page-prev" class="secondary">‹ Previous</button>
+          <span id="page-label" class="muted"></span>
+          <button id="page-next" class="secondary">Next ›</button>
+        </nav>
+      </section>
+
+      <aside class="session" aria-label="Tonight's session">
+        <div class="session-head">
+          <div>
+            <h2>Tonight</h2>
+            <p id="session-started" class="muted"></p>
+          </div>
+          <button id="new-session" class="secondary">New session</button>
+        </div>
+
+        <div id="picked" class="picked" hidden></div>
+
+        <div id="shortlist-section">
+          <p id="shortlist-empty" class="muted">Add movies from search to build tonight's shortlist, then pick one.</p>
+          <ul id="shortlist" class="shortlist"></ul>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

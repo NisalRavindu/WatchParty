@@ -1,0 +1,18 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+backend/.wparty/
+.venv/
+
+# Local data
+*.db
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
