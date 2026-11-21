@@ -108,6 +108,21 @@
 
         <div id="picked" class="picked" hidden></div>
 
+        <div id="mood" class="mood" hidden>
+          <div id="mood-closed" class="mood-closed">
+            <span id="mood-summary" class="muted"></span>
+            <button id="mood-open" type="button" class="secondary"></button>
+          </div>
+          <div id="mood-open-panel" class="mood-panel" hidden>
+            <p><strong>Setting tonight's mood</strong></p>
+            <p class="muted">Mark movies that feel like tonight, or that it's definitely not. Search for any movie, seen or not.</p>
+            <div class="mood-done">
+              <span id="mood-count" class="muted"></span>
+              <button id="mood-close" type="button">Done</button>
+            </div>
+          </div>
+        </div>
+
         <div id="shortlist-section">
           <p id="shortlist-empty" class="muted">Add movies from search to build tonight's shortlist, then pick one.</p>
           <ul id="shortlist" class="shortlist"></ul>

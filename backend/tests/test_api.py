@@ -96,6 +96,32 @@ def test_shortlist_then_pick(client):
     assert client.get("/api/sessions").json()[0]["id"] == session_id
 
 
+def test_examples_say_what_tonight_is_and_is_not(client):
+    session_id = client.post("/api/sessions").json()["id"]
+    examples = f"/api/sessions/{session_id}/examples"
+    assert client.put(examples, json={"movie_id": 1, "positive": True}).status_code == 200
+    client.put(examples, json={"movie_id": 2, "positive": True})
+    client.put(examples, json={"movie_id": 2, "positive": True})  # no change, no signal
+    client.put(examples, json={"movie_id": 2, "positive": False})  # changed my mind
+    client.put(examples, json={"movie_id": 3, "positive": False})
+    assert client.delete(f"{examples}/3").status_code == 204
+    assert client.delete(f"{examples}/3").status_code == 404
+
+    detail = client.get(f"/api/sessions/{session_id}").json()
+    assert [(e["movie"]["id"], e["positive"]) for e in detail["examples"]] == [(1, True), (2, False)]
+    assert detail["candidates"] == []  # examples are context, not candidates
+    assert [(s["kind"], s["movie_id"], s["value"]) for s in detail["signals"]] == [
+        ("example_set", 1, 1.0),
+        ("example_set", 2, 1.0),
+        ("example_set", 2, -1.0),
+        ("example_set", 3, -1.0),
+        ("example_removed", 3, 1.0),
+    ]
+
+    client.post(f"/api/sessions/{session_id}/pick", json={"movie_id": 4})
+    assert client.put(examples, json={"movie_id": 5, "positive": True}).status_code == 409
+
+
 def test_dashboard_is_served(client):
     response = client.get("/")
     assert response.status_code == 200

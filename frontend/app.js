@@ -14,6 +14,8 @@ const state = {
   libraryFilter: "all", // a LIBRARY_FILTERS key
   session: null,
   candidates: [],
+  examples: [], // [{ movie, positive }]: what tonight is, and isn't, about
+  settingMood: false, // while on, movie cards mark examples instead of adding to the shortlist
   results: [],
   page: 1,
   totalPages: 1,
@@ -131,7 +133,21 @@ function statusControl(movie) {
   return el("div", { className: "status" }, toggle, menu);
 }
 
-function movieCard(movie) {
+const exampleOf = (movieId) => state.examples.find((example) => example.movie.id === movieId);
+
+// While setting the mood: "Like this" / "Not this" toggles. Pressing the active one takes it back.
+function moodActions(movie) {
+  const current = exampleOf(movie.id)?.positive;
+  const toggle = (label, positive) =>
+    button(
+      label,
+      () => run(() => (current === positive ? removeExample(movie.id) : setExample(movie.id, positive))),
+      { className: positive ? "like" : "not", ariaPressed: String(current === positive) },
+    );
+  return el("div", { className: "mood-actions" }, toggle("Like this", true), toggle("Not this", false));
+}
+
+function shortlistButton(movie) {
   const onShortlist = state.candidates.some((candidate) => candidate.id === movie.id);
   const add = button(
     onShortlist ? "On shortlist" : "Add to tonight",
@@ -142,6 +158,10 @@ function movieCard(movie) {
     },
     { disabled: onShortlist || isDecided() },
   );
+  return add;
+}
+
+function movieCard(movie) {
 
   return el(
     "li",
@@ -153,7 +173,7 @@ function movieCard(movie) {
       el("h3", { textContent: movie.title }),
       el("p", { className: "muted", textContent: [year(movie), ...movie.genres.slice(0, 2)].join(" · ") }),
       ...(movie.credit ? [el("p", { className: "muted credit", textContent: movie.credit })] : []),
-      add,
+      state.settingMood && !isDecided() ? moodActions(movie) : shortlistButton(movie),
     ),
   );
 }
@@ -313,6 +333,7 @@ async function loadSession(sessionId) {
   const detail = await api(`/sessions/${sessionId}`);
   state.session = detail.session;
   state.candidates = detail.candidates;
+  state.examples = detail.examples;
   renderSession();
   renderGrid();
 }
@@ -336,6 +357,22 @@ async function addCandidate(movieId) {
 async function removeCandidate(movieId) {
   await api(`/sessions/${state.session.id}/candidates/${movieId}`, { method: "DELETE" });
   await loadSession(state.session.id);
+}
+
+async function setExample(movieId, positive) {
+  await api(`/sessions/${state.session.id}/examples`, { method: "PUT", body: { movie_id: movieId, positive } });
+  await loadSession(state.session.id);
+}
+
+async function removeExample(movieId) {
+  await api(`/sessions/${state.session.id}/examples/${movieId}`, { method: "DELETE" });
+  await loadSession(state.session.id);
+}
+
+function setMoodOpen(open) {
+  state.settingMood = open;
+  renderSession();
+  renderGrid();
 }
 
 async function pickMovie(movieId) {
@@ -366,6 +403,7 @@ function renderSession() {
   const picked = state.candidates.find((movie) => movie.id === state.session.picked_movie_id);
   $("picked").hidden = !isDecided();
   $("shortlist-section").hidden = isDecided();
+  renderMood();
 
   if (isDecided()) {
     $("picked").replaceChildren(
@@ -380,29 +418,47 @@ function renderSession() {
   $("shortlist-empty").hidden = state.candidates.length > 0;
   $("shortlist").replaceChildren(
     ...state.candidates.map((movie) =>
-      el(
-        "li",
-        { className: "shortlist-item" },
-        poster(movie, "thumb", THUMB_URL),
-        el(
-          "div",
-          { className: "title" },
-          el("div", { textContent: movie.title }),
-          el("div", { className: "muted", textContent: year(movie) }),
-        ),
-        el(
-          "div",
-          { className: "actions" },
-          button("Pick", () => run(() => pickMovie(movie.id))),
-          button("✕", () => run(() => removeCandidate(movie.id)), {
-            className: "secondary",
-            title: "Remove from shortlist",
-            ariaLabel: `Remove ${movie.title} from shortlist`,
-          }),
-        ),
+      sessionItem(
+        movie,
+        button("Pick", () => run(() => pickMovie(movie.id))),
+        removeButton(`Remove ${movie.title} from shortlist`, () => removeCandidate(movie.id)),
       ),
     ),
   );
+}
+
+// The mood is context for suggestions, not a list to keep: closed, it's one line; open, the cards do the work.
+function renderMood() {
+  const likes = state.examples.filter((example) => example.positive).length;
+  const nots = state.examples.length - likes;
+  const counted = [likes && `${likes} like this`, nots && `${nots} not this`].filter(Boolean).join(" · ");
+  const open = state.settingMood && !isDecided();
+
+  $("mood").hidden = isDecided();
+  $("mood-closed").hidden = open;
+  $("mood-open-panel").hidden = !open;
+  $("mood-summary").textContent = counted ? `Mood: ${counted}` : "";
+  $("mood-open").textContent = counted ? "Change" : "Set tonight's mood";
+  $("mood-count").textContent = counted || "Nothing marked yet";
+}
+
+function sessionItem(movie, ...actions) {
+  return el(
+    "li",
+    { className: "shortlist-item" },
+    poster(movie, "thumb", THUMB_URL),
+    el(
+      "div",
+      { className: "title" },
+      el("div", { textContent: movie.title }),
+      el("div", { className: "muted", textContent: year(movie) }),
+    ),
+    el("div", { className: "actions" }, ...actions),
+  );
+}
+
+function removeButton(label, remove) {
+  return button("✕", () => run(remove), { className: "secondary", title: label, ariaLabel: label });
 }
 
 // ---- Start ----
@@ -437,6 +493,8 @@ for (const id of ["year-from", "year-to"]) {
   $(id).addEventListener("input", searchSoon);
 }
 $("new-session").addEventListener("click", () => run(startNewSession));
+$("mood-open").addEventListener("click", () => setMoodOpen(true));
+$("mood-close").addEventListener("click", () => setMoodOpen(false));
 
 document.addEventListener("click", closeStatusMenus);
 document.addEventListener("keydown", (event) => {

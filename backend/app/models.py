@@ -56,6 +56,15 @@ class SessionCandidate(SQLModel, table=True):
     added_at: datetime = Field(default_factory=now)
 
 
+class SessionExample(SQLModel, table=True):
+    """A movie that says what tonight is (positive) or isn't (negative) about. Context, not a candidate."""
+
+    session_id: int = Field(foreign_key="watchsession.id", primary_key=True)
+    movie_id: int = Field(foreign_key="movie.id", primary_key=True)
+    positive: bool
+    added_at: datetime = Field(default_factory=now)
+
+
 class SignalKind(StrEnum):
     COMPARED = "compared"  # movie_id beat other_movie_id (brackets, tier games)
     NAMED = "named"  # answered a "Name 3 movies to ___" prompt; value +1 want / -1 don't want
@@ -64,6 +73,8 @@ class SignalKind(StrEnum):
     PICKED = "picked"  # final pick of a session
     STATUS_SET = "status_set"  # library entry changed (context: seen, intent, previous)
     STATUS_CLEARED = "status_cleared"  # removed from the library (context.previous)
+    EXAMPLE_SET = "example_set"  # session example added or flipped; value +1 like this / -1 not this
+    EXAMPLE_REMOVED = "example_removed"  # session example taken back
 
 
 class Signal(SQLModel, table=True):

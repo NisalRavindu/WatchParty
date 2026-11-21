@@ -12,6 +12,8 @@
   --overlay-text: #ffffff;
   --seen: #15803d;
   --curious: #57534e;
+  --like: #0f766e;
+  --not: #b91c1c;
   color-scheme: light;
 }
 
@@ -29,6 +31,8 @@
     --overlay: rgba(10, 9, 8, 0.78);
     --seen: #22c55e;
     --curious: #a8a29e;
+    --like: #2dd4bf;
+    --not: #f87171;
     color-scheme: dark;
   }
 }
@@ -463,4 +467,56 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--accent);
+}
+
+/* Mood: an optional step that gives tonight context through example movies */
+
+.mood-closed,
+.mood-done {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.mood-closed button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.mood-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--like);
+  border-radius: 10px;
+}
+
+.mood-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.card-body .mood-actions button {
+  flex: 1;
+  margin-top: 0;
+  padding: 6px 4px;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.card-body .mood-actions .like[aria-pressed="true"] {
+  background: var(--like);
+  border-color: var(--like);
+  color: var(--accent-text);
+}
+
+.card-body .mood-actions .not[aria-pressed="true"] {
+  background: var(--not);
+  border-color: var(--not);
+  color: var(--accent-text);
 }
