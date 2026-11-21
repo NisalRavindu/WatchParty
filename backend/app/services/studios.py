@@ -26,7 +26,11 @@ KNOWN_STUDIOS = [
     ([5], ["Columbia Pictures"], ["columbia", "columbia pictures"]),
     ([2251], ["Sony Pictures Animation"], ["sony animation", "sony pictures animation"]),
     ([4], ["Paramount Pictures"], ["paramount", "paramount pictures"]),
-    ([25, 127928], ["20th Century Fox", "20th Century Studios"], ["fox", "20th century", "20th century fox", "20th century studios"]),
+    (
+        [25, 127928],
+        ["20th Century Fox", "20th Century Studios"],
+        ["fox", "20th century", "20th century fox", "20th century studios"],
+    ),
     ([43], ["Fox Searchlight Pictures"], ["searchlight", "fox searchlight"]),
     ([21], ["Metro-Goldwyn-Mayer"], ["mgm", "metro goldwyn mayer"]),
     ([1632, 491], ["Lionsgate", "Summit Entertainment"], ["lionsgate", "lions gate"]),
@@ -73,7 +77,7 @@ async def resolve(terms: list[str]) -> tuple[list[int], list[str]]:
     ids: list[int] = []
     names: list[str] = []
     for term_ids, term_names in await asyncio.gather(*(resolve_term(term) for term in terms)):
-        for company_id, name in zip(term_ids, term_names):
+        for company_id, name in zip(term_ids, term_names, strict=True):
             if company_id not in ids:
                 ids.append(company_id)
                 names.append(name)

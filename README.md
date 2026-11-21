@@ -1,5 +1,7 @@
 # WatchParty
 
+[![CI](https://github.com/NisalRavindu/WatchParty/actions/workflows/ci.yml/badge.svg)](https://github.com/NisalRavindu/WatchParty/actions/workflows/ci.yml)
+
 A web app that makes choosing a movie meaningful and fun, for a watch party or a night alone. Instead of a black-box recommendation feed, it learns your taste from what you do: the movies you shortlist, the ones you pick, and small games like head-to-head brackets.
 
 > Work in progress. Today it's a single-user local app.
@@ -12,6 +14,7 @@ A web app that makes choosing a movie meaningful and fun, for a watch party or a
   - Video extras, placeholder entries and "Self" appearances are filtered out
 - **One status per movie**: Seen, Want to watch (Rewatch if already seen) or Curious, without separate lists to maintain.
 - **Tonight sessions**: shortlist candidates for a session and lock in the pick.
+- **Tonight's mood** (optional): mark a few "like this" / "not this" example movies to give the session context for suggestions.
 - **Signal log**: every interaction (compare, shortlist, pick, status change) is stored as a signal, and preferences such as Elo rankings from brackets are derived from it.
 
 ## Stack
@@ -34,20 +37,28 @@ frontend/       index.html, app.js, styles.css
 
 ## Run it locally
 
-Requires Python 3.11+ and a free TMDB API key.
+You need a free TMDB API key. Copy `backend/.env.example` to `backend/.env` and put your key in it.
+
+**With Docker:**
+
+```bash
+docker build -t watchparty .
+docker run -p 8000:8000 --env-file backend/.env -v watchparty-data:/data watchparty
+```
+
+**Without Docker** (Python 3.11+):
 
 ```bash
 cd backend
 python -m venv .venv
 .venv/Scripts/activate        # macOS/Linux: source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env          # then put your TMDB key in .env
+pip install -r requirements-dev.txt
 uvicorn app.main:app
 ```
 
 Open http://localhost:8000.
 
-Run the tests with `pytest` from `backend/`.
+Every push runs the linter (`ruff check .`, `ruff format --check .`), the tests (`pytest`), and a build and smoke test of the Docker image in GitHub Actions.
 
 ---
 

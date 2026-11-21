@@ -239,23 +239,24 @@ async def _by_keyword(filters: SearchFilters, today: date) -> Found:
     # Genre words ("heist + comedy", "-horror") are rarely keyword tags on TMDB, so they act on the
     # genre instead. A wanted genre only works with "all": TMDB can't OR a genre with a keyword.
     genres = {name.casefold(): {"id": genre_id, "name": name} for genre_id, name in (await genre_names()).items()}
-    with_genres = [genres[term.casefold()] for term in wanted if filters.match == Match.ALL and term.casefold() in genres]
+    all_mode = filters.match == Match.ALL
+    with_genres = [genres[term.casefold()] for term in wanted if all_mode and term.casefold() in genres]
     without_genres = [genres[term.casefold()] for term in unwanted if term.casefold() in genres]
-    wanted = [term for term in wanted if not (filters.match == Match.ALL and term.casefold() in genres)]
+    wanted = [term for term in wanted if not (all_mode and term.casefold() in genres)]
     unwanted = [term for term in unwanted if term.casefold() not in genres]
 
     groups = await asyncio.gather(*(_keywords_for(term) for term in wanted + unwanted))
-    if missing := [term for term, group in zip(wanted + unwanted, groups) if not group]:
+    if missing := [term for term, group in zip(wanted + unwanted, groups, strict=True) if not group]:
         return Found(f'No keyword matches "{missing[0]}"', [])
     wanted_groups, unwanted_groups = groups[: len(wanted)], groups[len(wanted) :]
 
     # TMDB can't mix "," (all) and "|" (any) reliably, so "all" uses each term's best keyword
     # while "any" can take every form.
-    if filters.match == Match.ALL:
+    if all_mode:
         wanted_groups = [group[:1] for group in wanted_groups]
     params: dict = {}
     if wanted_groups:
-        params["with_keywords"] = _ids([k for group in wanted_groups for k in group], "," if filters.match == Match.ALL else "|")
+        params["with_keywords"] = _ids([k for group in wanted_groups for k in group], "," if all_mode else "|")
     if unwanted_groups:
         params["without_keywords"] = _ids([k for group in unwanted_groups for k in group])  # drops movies with any
     if without_genres:
@@ -264,7 +265,7 @@ async def _by_keyword(filters: SearchFilters, today: date) -> Found:
     if wanted_groups:
         names = [" / ".join(k["name"] for k in group) for group in wanted_groups]
         names += [f"{genre['name']} (genre)" for genre in with_genres]
-        joiner = " + " if filters.match == Match.ALL else " or "
+        joiner = " + " if all_mode else " or "
         label = ("Keywords: " if len(wanted_groups) > 1 else "Keyword: ") + joiner.join(names)
     elif with_genres:
         label = ("Genres: " if len(with_genres) > 1 else "Genre: ") + " + ".join(genre["name"] for genre in with_genres)
@@ -281,7 +282,9 @@ async def _by_keyword(filters: SearchFilters, today: date) -> Found:
 
 async def _by_studio(filters: SearchFilters, today: date) -> Found:
     wanted, unwanted = split_exclusions(split_terms(filters.q))
-    (ids, names), (excluded_ids, excluded_names) = await asyncio.gather(studios.resolve(wanted), studios.resolve(unwanted))
+    (ids, names), (excluded_ids, excluded_names) = await asyncio.gather(
+        studios.resolve(wanted), studios.resolve(unwanted)
+    )
     if not ids:
         return Found(f'No studio matches "{filters.q}"', [])
 
