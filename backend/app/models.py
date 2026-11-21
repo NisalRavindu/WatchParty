@@ -75,6 +75,7 @@ class SignalKind(StrEnum):
     STATUS_CLEARED = "status_cleared"  # removed from the library (context.previous)
     EXAMPLE_SET = "example_set"  # session example added or flipped; value +1 like this / -1 not this
     EXAMPLE_REMOVED = "example_removed"  # session example taken back
+    NOT_SEEN = "not_seen"  # "haven't seen it" in a game (context.topic)
 
 
 class Signal(SQLModel, table=True):

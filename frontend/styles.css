@@ -520,3 +520,150 @@ select {
   border-color: var(--not);
   color: var(--accent-text);
 }
+
+/* Bracket */
+
+#bracket-view h2 {
+  font-size: 18px;
+}
+
+#bracket-setup {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 12px;
+}
+
+#bracket-setup .chips {
+  margin-bottom: 0;
+}
+
+.custom-topic input {
+  width: min(320px, 100%);
+}
+
+.match-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.duel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px));
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.contender {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 4px;
+}
+
+.contender-pick {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.15s, transform 0.15s;
+}
+
+.contender-pick:hover,
+.contender-pick:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.contender h3 {
+  font-size: 15px;
+  margin-top: 6px;
+}
+
+.contender .secondary {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.bracket-done {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: 8px;
+}
+
+.bracket-done .poster {
+  max-width: 220px;
+  border-radius: 12px;
+}
+
+.bracket-done .label {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+
+.rankings {
+  margin-top: 32px;
+}
+
+.rankings h3 {
+  font-size: 16px;
+}
+
+.rankings ol {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  counter-reset: rank;
+}
+
+.ranking {
+  display: grid;
+  grid-template-columns: 1.5em 44px minmax(0, 1fr) minmax(80px, 200px);
+  align-items: center;
+  gap: 10px;
+  counter-increment: rank;
+}
+
+.ranking::before {
+  content: counter(rank);
+  color: var(--muted);
+  text-align: right;
+}
+
+.band {
+  position: relative;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.band-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.band-dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}

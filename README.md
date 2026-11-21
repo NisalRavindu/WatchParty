@@ -15,7 +15,10 @@ A web app that makes choosing a movie meaningful and fun, for a watch party or a
 - **One status per movie**: Seen, Want to watch (Rewatch if already seen) or Curious, without separate lists to maintain.
 - **Tonight sessions**: shortlist candidates for a session and lock in the pick.
 - **Tonight's mood** (optional): mark a few "like this" / "not this" example movies to give the session context for suggestions.
-- **Signal log**: every interaction (compare, shortlist, pick, status change) is stored as a signal, and preferences such as Elo rankings from brackets are derived from it.
+- **Bracket game**: 8-movie knockout brackets on a topic ("Better ending", "More fun to rewatch", or your own). Playing a movie marks it as seen; "Haven't seen it" swaps in a stand-in, so Seen fills up without a chore.
+  - Rankings come from a **Bradley-Terry model** fitted to every matchup, with uncertainty (MAP + Laplace approximation). Each movie shows a confidence band, not a falsely precise rank.
+  - Round-one matchups are chosen to be the most informative: close strengths and uncertain movies first. Elo stays in the code as the simple baseline.
+- **Signal log**: every interaction (matchup, shortlist, pick, status change, mood example) is stored as a signal, and rankings and preferences are derived from it.
 
 ## Stack
 

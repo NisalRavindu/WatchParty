@@ -18,6 +18,7 @@
         <nav id="tabs-top" class="tabs" aria-label="Views">
           <button id="tab-search" class="tab" aria-pressed="true">Search</button>
           <button id="tab-library" class="tab" aria-pressed="false">My movies <span id="library-count" class="count"></span></button>
+          <button id="tab-bracket" class="tab" aria-pressed="false">Bracket</button>
         </nav>
 
         <div id="search-view">
@@ -86,6 +87,35 @@
         <div id="library-view" hidden>
           <div id="library-filters" class="chips" role="group" aria-label="Filter my movies"></div>
           <p id="library-empty" class="muted" hidden></p>
+        </div>
+
+        <div id="bracket-view" hidden>
+          <div id="bracket-setup">
+            <h2>What's the matchup about?</h2>
+            <p class="muted">Pick the better one each round. Playing a movie marks it as seen, so say if you haven't.</p>
+            <div id="topics" class="chips" role="group" aria-label="Topic"></div>
+            <form id="custom-topic-form" class="custom-topic">
+              <input id="custom-topic" placeholder="Or your own, e.g. Better villain" maxlength="60" autocomplete="off">
+            </form>
+            <button id="bracket-start" type="button">Start bracket</button>
+          </div>
+
+          <div id="bracket-match" hidden>
+            <div class="match-head">
+              <p id="match-label" class="muted"></p>
+              <button id="bracket-quit" type="button" class="secondary">Stop</button>
+            </div>
+            <h2 id="match-topic"></h2>
+            <div id="duel" class="duel"></div>
+          </div>
+
+          <div id="bracket-done" class="bracket-done" hidden></div>
+
+          <section id="rankings" class="rankings" hidden>
+            <h3 id="rankings-title"></h3>
+            <p class="muted">Band = how sure it is so far. Overlapping bands are still a toss-up; more brackets narrow them.</p>
+            <ol id="rankings-list"></ol>
+          </section>
         </div>
 
         <ul id="movie-grid" class="movie-grid"></ul>

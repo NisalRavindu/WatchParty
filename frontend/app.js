@@ -10,7 +10,7 @@ const LIBRARY_FILTERS = {
 };
 
 const state = {
-  view: "search", // "search" | "library"
+  view: "search", // "search" | "library" | "bracket"
   libraryFilter: "all", // a LIBRARY_FILTERS key
   session: null,
   candidates: [],
@@ -20,6 +20,8 @@ const state = {
   page: 1,
   totalPages: 1,
   library: [], // [{ movie, seen, intent, updated_at }], most recently changed first
+  topic: "Better movie", // bracket topic
+  bracket: null, // { topic, round, pairs, match, winners, reserves, champion } while one is played
 };
 
 const $ = (id) => document.getElementById(id);
@@ -179,6 +181,7 @@ function movieCard(movie) {
 }
 
 function renderGrid() {
+  $("movie-grid").hidden = state.view === "bracket";
   const movies =
     state.view === "search"
       ? state.results
@@ -204,9 +207,10 @@ function showView(view) {
   state.view = view;
   $("search-view").hidden = view !== "search";
   $("library-view").hidden = view !== "library";
-  $("tab-search").ariaPressed = String(view === "search");
-  $("tab-library").ariaPressed = String(view === "library");
+  $("bracket-view").hidden = view !== "bracket";
+  for (const name of ["search", "library", "bracket"]) $(`tab-${name}`).ariaPressed = String(view === name);
   renderGrid();
+  if (view === "bracket") run(renderBracket);
 }
 
 function renderLibraryChrome() {
@@ -461,10 +465,196 @@ function removeButton(label, remove) {
   return button("✕", () => run(remove), { className: "secondary", title: label, ariaLabel: label });
 }
 
+// ---- Bracket ----
+
+// Topics about movies you've seen. Not trivia: there's no right answer, only yours.
+const TOPICS = ["Better movie", "Better ending", "More fun to rewatch", "Stayed with me longer", "Better soundtrack"];
+
+const isSeen = (movieId) => entryOf(movieId)?.seen ?? false;
+
+async function startBracket() {
+  const { pairs, reserves } = await api("/games/brackets", { method: "POST", body: { topic: state.topic } });
+  state.bracket = { topic: state.topic, round: 1, pairs, match: 0, winners: [], reserves, champion: null };
+  await renderBracket();
+}
+
+// While an answer is being saved, the match can't be answered again (no double-clicks).
+async function answer(save) {
+  for (const control of $("duel").querySelectorAll("button")) control.disabled = true;
+  try {
+    await save();
+  } finally {
+    await renderBracket();
+  }
+}
+
+async function pickWinner(winner, loser) {
+  await api("/games/comparisons", {
+    method: "POST",
+    body: { winner_id: winner.id, loser_id: loser.id, topic: state.bracket.topic },
+  });
+  advance(winner);
+  await loadLibrary(); // both count as seen now
+}
+
+// "Haven't seen it": a stand-in takes its place. With none left, the other movie goes through.
+async function notSeen(movie, side) {
+  const bracket = state.bracket;
+  await api("/games/not-seen", { method: "POST", body: { movie_id: movie.id, topic: bracket.topic } });
+  const pair = bracket.pairs[bracket.match];
+  const standIn = bracket.reserves.shift();
+  if (standIn) pair[side] = standIn;
+  else advance(pair[1 - side]);
+}
+
+// Record the match winner; after the last match of a round, pair the winners for the next one.
+function advance(winner) {
+  const bracket = state.bracket;
+  bracket.winners.push(winner);
+  bracket.match += 1;
+  if (bracket.match < bracket.pairs.length) return;
+
+  const winners = bracket.winners;
+  if (winners.length === 1) {
+    bracket.champion = winners[0];
+    return;
+  }
+  const pairs = [];
+  for (let i = 0; i < winners.length; i += 2) pairs.push([winners[i], winners[i + 1] ?? null]); // null: a bye
+  Object.assign(bracket, { round: bracket.round + 1, pairs, match: 0, winners: [] });
+}
+
+function roundName(bracket) {
+  if (bracket.pairs.length === 1) return "Final";
+  if (bracket.pairs.length === 2) return "Semi-final";
+  return `Round ${bracket.round}`;
+}
+
+async function renderBracket() {
+  const bracket = state.bracket;
+  const playing = Boolean(bracket) && !bracket.champion;
+  if (playing && bracket.pairs[bracket.match][1] === null) {
+    advance(bracket.pairs[bracket.match][0]); // the odd one out goes through on its own
+    return renderBracket();
+  }
+
+  $("bracket-setup").hidden = Boolean(bracket);
+  $("bracket-match").hidden = !playing;
+  $("bracket-done").hidden = !bracket?.champion;
+
+  if (!bracket) renderTopics();
+  if (playing) {
+    const pair = bracket.pairs[bracket.match];
+    $("match-label").textContent = `${roundName(bracket)} · match ${bracket.match + 1} of ${bracket.pairs.length}`;
+    $("match-topic").textContent = `${bracket.topic}?`;
+    // Only first-round movies can be unseen: later ones have already played.
+    $("duel").replaceChildren(...pair.map((movie, side) => contender(movie, pair[1 - side], side, bracket.round === 1)));
+  }
+  if (bracket?.champion) {
+    const champion = bracket.champion;
+    $("bracket-done").replaceChildren(
+      el("p", { className: "label", textContent: `${bracket.topic}: the winner` }),
+      poster(champion, "poster"),
+      el("h3", { textContent: `${champion.title} (${year(champion)})` }),
+      button("Play another", () => {
+        state.bracket = null;
+        run(renderBracket);
+      }),
+    );
+  }
+  await renderRankings(bracket?.topic ?? state.topic);
+}
+
+function contender(movie, opponent, side, canSkip) {
+  const pick = button("", () => run(() => answer(() => pickWinner(movie, opponent))), {
+    className: "contender-pick",
+    ariaLabel: `${movie.title} wins`,
+    title: `${movie.title} wins`,
+  });
+  pick.append(poster(movie, "poster"));
+  return el(
+    "div",
+    { className: "contender" },
+    pick,
+    el("h3", { textContent: movie.title }),
+    el("p", { className: "muted", textContent: year(movie) }),
+    ...(canSkip && !isSeen(movie.id)
+      ? [button("Haven't seen it", () => run(() => answer(() => notSeen(movie, side))), { className: "secondary" })]
+      : []),
+  );
+}
+
+function renderTopics() {
+  $("topics").replaceChildren(
+    ...TOPICS.map((topic) =>
+      button(
+        topic,
+        () => {
+          state.topic = topic;
+          $("custom-topic").value = "";
+          run(renderBracket);
+        },
+        { className: "chip", ariaPressed: String(state.topic === topic) },
+      ),
+    ),
+  );
+  $("custom-topic").value = TOPICS.includes(state.topic) ? "" : state.topic;
+}
+
+// Each row: the dot is the best guess, the band is roughly 95% sure. All rows share one scale so
+// they can be compared. Only differences mean anything, so no numbers are shown.
+const BAND_RANGE = 3;
+
+function bandPosition(value) {
+  const clamped = Math.max(-BAND_RANGE, Math.min(BAND_RANGE, value));
+  return ((clamped + BAND_RANGE) / (2 * BAND_RANGE)) * 100;
+}
+
+async function renderRankings(topic) {
+  const ranked = await api(`/games/rankings?${new URLSearchParams({ topic })}`);
+  $("rankings").hidden = ranked.length === 0;
+  $("rankings-title").textContent = `Your rankings: ${topic}`;
+  $("rankings-list").replaceChildren(
+    ...ranked.map(({ movie, strength, sd, games }) => {
+      const low = bandPosition(strength - 1.96 * sd);
+      const high = bandPosition(strength + 1.96 * sd);
+      const range = el("span", { className: "band-range" });
+      range.style.left = `${low}%`;
+      range.style.width = `${high - low}%`;
+      const dot = el("span", { className: "band-dot" });
+      dot.style.left = `${bandPosition(strength)}%`;
+      return el(
+        "li",
+        { className: "ranking" },
+        poster(movie, "thumb", THUMB_URL),
+        el(
+          "div",
+          { className: "title" },
+          el("div", { textContent: movie.title }),
+          el("div", { className: "muted", textContent: `${games} ${games === 1 ? "game" : "games"}` }),
+        ),
+        el("div", { className: "band", title: "Dot: best guess. Band: how sure it is so far." }, range, dot),
+      );
+    }),
+  );
+}
+
 // ---- Start ----
 
 $("tab-search").addEventListener("click", () => showView("search"));
 $("tab-library").addEventListener("click", () => showView("library"));
+$("tab-bracket").addEventListener("click", () => showView("bracket"));
+$("bracket-start").addEventListener("click", () => run(startBracket));
+$("bracket-quit").addEventListener("click", () => {
+  state.bracket = null;
+  run(renderBracket);
+});
+$("custom-topic-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const topic = $("custom-topic").value.trim();
+  if (topic) state.topic = topic;
+  run(renderBracket);
+});
 
 $("search-form").addEventListener("submit", (event) => {
   event.preventDefault();

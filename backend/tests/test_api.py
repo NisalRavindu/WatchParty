@@ -60,6 +60,34 @@ def test_bracket_results_become_rankings(client):
 
     ranked = client.get("/api/games/rankings").json()
     assert [entry["movie"]["id"] for entry in ranked] == [1, 2, 3]
+    assert [entry["games"] for entry in ranked] == [2, 2, 2]
+    assert all(0 < entry["sd"] < 1 for entry in ranked)
+
+
+def test_playing_a_matchup_means_both_were_seen(client):
+    client.patch("/api/library/2", json={"intent": "want"})
+    client.post("/api/games/comparisons", json={"winner_id": 1, "loser_id": 2, "topic": "Better ending"})
+    assert sorted(library(client)) == [(1, True, None), (2, True, None)]  # watching fulfilled the Want
+    assert client.get("/api/games/rankings?topic=Other").json() == []
+
+
+def test_bracket_skips_movies_they_have_not_seen(client, monkeypatch):
+    from app.models import Movie
+    from app.services import brackets
+
+    async def well_known_movies(rng):
+        return [Movie(id=i, title=f"Famous {i}") for i in range(100, 112)]
+
+    monkeypatch.setattr(brackets, "well_known_movies", well_known_movies)
+    client.patch("/api/library/1", json={"seen": True})
+    client.patch("/api/library/100", json={"intent": "want"})  # on their list, so not seen
+    client.post("/api/games/not-seen", json={"movie_id": 101, "topic": "Better ending"})
+
+    bracket = client.post("/api/games/brackets", json={"topic": "Better ending"}).json()
+    played = [movie["id"] for pair in bracket["pairs"] for movie in pair]
+    assert len(played) == len(set(played)) == 8
+    assert 1 in played and not {100, 101} & set(played + [m["id"] for m in bracket["reserves"]])
+    assert client.post("/api/games/brackets", json={"size": 7}).status_code == 422
 
 
 def test_session_keeps_context_and_pick_together(client):
